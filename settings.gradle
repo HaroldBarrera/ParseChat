@@ -1,0 +1,2 @@
+rootProject.name = "ParseChat"
+include ':app'
