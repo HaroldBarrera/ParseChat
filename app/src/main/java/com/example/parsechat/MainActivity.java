@@ -1,5 +1,6 @@
 package com.example.parsechat;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -13,13 +14,28 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.Task;
+import com.google.firebase.installations.FirebaseInstallations;
+import com.google.firebase.messaging.FirebaseMessaging;
 import com.parse.FindCallback;
+import com.parse.FunctionCallback;
+import com.parse.ParseCloud;
 import com.parse.ParseException;
+import com.parse.ParseInstallation;
 import com.parse.ParseObject;
+import com.parse.ParsePush;
 import com.parse.ParseQuery;
 import com.parse.SaveCallback;
+import com.parse.SendCallback;
+import com.parse.livequery.ParseLiveQueryClient;
+import com.parse.livequery.SubscriptionHandling;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -27,6 +43,7 @@ import de.hdodenhof.circleimageview.CircleImageView;
 
 public class MainActivity extends AppCompatActivity {
 
+    private static final String TAG = "777";
     private CircleImageView fotoPerfil;
     private TextView nombre;
     private static RecyclerView rvMensajes;
@@ -40,9 +57,12 @@ public class MainActivity extends AppCompatActivity {
     private static final int MAXIMO_DE_MENSAJES = 50;
     private static boolean mFirstLoad = true;
 
+    public static final String CANALPRINCIPAL = "ParseChat";
+
     static final long POLL_INTERVAL = TimeUnit.SECONDS.toMillis(3);
 
     Handler myHandler = new android.os.Handler();
+
     Runnable mRefreshMessagesRunnable = new Runnable() {
         @Override
         public void run() {
@@ -55,6 +75,10 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+
+        ParseInstallation.getCurrentInstallation().saveInBackground();
+        ParsePush.subscribeInBackground(CANALPRINCIPAL);
 
         fotoPerfil = (CircleImageView) findViewById(R.id.fotoPerfil);
         nombre = (TextView) findViewById(R.id.nombre);
@@ -69,14 +93,6 @@ public class MainActivity extends AppCompatActivity {
         //l.setReverseLayout(true);
         rvMensajes.setLayoutManager(l);
         rvMensajes.setAdapter(adapter);
-
-        if (listMensajes.isEmpty()){
-            System.out.println("-------------------");
-            System.out.println("LA LISTA ESTA VACIA");
-            System.out.println("-------------------");
-        }
-
-
 
         btnEnviar.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -94,6 +110,23 @@ public class MainActivity extends AppCompatActivity {
                             Toast.makeText(MainActivity.this, "Successfully created message on Parse",
                                     Toast.LENGTH_SHORT).show();
                             actualizarMensajes();
+                            HashMap<String,String> map = new HashMap<String, String>();
+                            map.put("Mensaje", m.getMensaje());
+                            ParseCloud.callFunctionInBackground("SendPush",map, new FunctionCallback<Object>() {
+
+                                @Override
+                                public void done(Object object, ParseException e) {
+                                    if (e == null){
+                                        System.out.println("yay " + object);
+                                    }else{
+                                        System.out.println("ERROR: " + e.getMessage());
+                                        System.out.println("LOCALIZACION: " + e.getLocalizedMessage());
+                                        System.out.println("CAUSA: " + e.getCause());
+                                        System.out.println("CODIGO: " + e.getCode());
+                                    }
+                                }
+                            });
+
                             //setScrollbar();
                         } else {
                             Log.e(MainActivity.class.getSimpleName(),"Failed to save message", e);
@@ -111,7 +144,9 @@ public class MainActivity extends AppCompatActivity {
                 setScrollbar();
             }
         });
+
     }
+
 
     public static void actualizarMensajes(){
         query = ParseQuery.getQuery(Mensaje.class);
@@ -137,6 +172,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
     }
+
     @Override
     protected void onResume() {
         super.onResume();
@@ -154,4 +190,5 @@ public class MainActivity extends AppCompatActivity {
     private void setScrollbar(){
         rvMensajes.scrollToPosition(adapter.getItemCount() - 1);
     }
+
 }

@@ -1,8 +1,13 @@
 package com.example.parsechat;
 import com.parse.Parse;
+import com.parse.ParseException;
+import com.parse.ParseInstallation;
 import com.parse.ParseObject;
+import com.parse.ParsePush;
+import com.parse.SaveCallback;
 
 import android.app.Application;
+import android.util.Log;
 
 public class App extends Application {
     @Override
@@ -18,5 +23,8 @@ public class App extends Application {
                 .server("http://192.168.10.100:1337/parse/")
                 .build()
         );
+
+
+
     }
 }
